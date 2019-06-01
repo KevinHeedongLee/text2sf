@@ -1,0 +1,5 @@
+﻿  main.c
+  pcap_output.c
+  sf_build_functions.c
+  Generating Code...
+  text2sf.vcxproj -> C:\SourceCodes\text2sf-master_latest\src\vs2017\Debug\text2sf.exe

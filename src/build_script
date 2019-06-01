@@ -1,0 +1,5 @@
+#!/bin/bash
+#
+# TODO - replace with a proper makefile...
+#
+gcc -Wall -Wpedantic -o text2sf ./main.c ./pcap_output/pcap_output.c ./sharkfood/sf_build_functions.c -I./abcc_defs -I./pcap_output -I./sharkfood -I./useful_macros
