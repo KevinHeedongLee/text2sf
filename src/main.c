@@ -24,12 +24,12 @@
 #include <stdio.h>
 #include <string.h>
 
-#include "useful_macros.h" 
+#include "useful_macros.h"
 
 #define PACKED_STRUCT PACKED_DATA         /* So that abp.h will use the PACKED... from useful_macros.h */
 #define ABCC_SYS_PACK_ON PACKED_DATA_ON   /* So that abp.h will use the PACKED... from useful_macros.h */
 #define ABCC_SYS_PACK_OFF PACKED_DATA_OFF /* So that abp.h will use the PACKED... from useful_macros.h */
-#include "abcc_td.h"        
+#include "abcc_td.h"
 #include "abp.h"
 
 #include "pcap_output.h"
@@ -146,40 +146,40 @@ static int file_read_line( FILE* file_ptr, char* buffer_ptr, int buffer_size )
 		return( EOF );
 	}
 
-   index = 0;
-   buffer_ptr[ 0 ] = 0;
+	index = 0;
+	buffer_ptr[ 0 ] = 0;
 
-   while( true ) {
-   tmp = fgetc( file_ptr );
+	while( true ) {
+		tmp = fgetc( file_ptr );
 
-   /* The EOF indication is not data, check for that before we do anything else. */
-   if( tmp == EOF ) {
-      if( index > 0 ) {
-         return( index );
-      } else {
-         return( EOF );
-      }
-   }
+		/* The EOF indication is not data, check for that before we do anything else. */
+		if( tmp == EOF ) {
+			if( index > 0 ) {
+				return( index );
+			} else {
+				return( EOF );
+			}
+		}
 
-   /* If the data is something other than CR/LF... */
-   if( ( tmp != CARRIAGE_RETURN ) && ( tmp != LINE_FEED ) ) {
-       /* ...then add it to the buffer... */
-      if( index < ( buffer_size - 1 ) ) {
-         buffer_ptr[ index ] = ( char )tmp;
-         index++;
-         /* ...and make sure the buffer is properly terminated. */
-         buffer_ptr[ index ] = 0;
-      }
-   } else {
+		/* If the data is something other than CR/LF... */
+		if( ( tmp != CARRIAGE_RETURN ) && ( tmp != LINE_FEED ) ) {
+			/* ...then add it to the buffer... */
+			if( index < ( buffer_size - 1 ) ) {
+				buffer_ptr[ index ] = ( char )tmp;
+				index++;
+				/* ...and make sure the buffer is properly terminated. */
+				buffer_ptr[ index ] = 0;
+			}
+		} else {
          if( index > 0 ) {
-         /* CR/LF was seen, return whatever data we ended up with. */
-         return( index );
+			   /* CR/LF was seen, return whatever data we ended up with. */
+			   return( index );
          } else {
-             /* CR/LF with no buffered data, i.e. blank line. Ignore. */
+            /* CR/LF with no buffered data, i.e. blank line. Ignore. */
          }
-   }
+		}
 
-   };
+	};
 
 	return( EOF );
 }
@@ -246,16 +246,19 @@ static int delete_char_from_string( char* string, char c )
 static bool parse_abcc_msg_header( char* string, ABP_MsgType8* ptr )
 {
    ABP_MsgHeaderType    tmp_header;
-   
-   /* Pattern to search for, names, scanf() format string, and storage. */
+
+   /*
+   ** Pattern to search for, names, and scanf() format string. Pointer to
+   ** storage is set later.
+   */
    struct parse_list_tag   parse_list[] = {
-      { "Size:0x",      "Size",        "%4x",   &tmp_header.iDataSize },
-      { "SrcId:0x",     "Source ID",   "%2x",   &tmp_header.bSourceId },
-      { "DestObj:0x",   "Object",      "%2x",   &tmp_header.bDestObj },
-      { "Inst:0x",      "Instance",    "%4x",   &tmp_header.iInstance },
-      { "Cmd:0x",       "Command",     "%2x",   &tmp_header.bCmd },
-      { "CmdExt0:0x",   "Ext 0",       "%2x",   &tmp_header.bCmdExt0 },
-      { "CmdExt1:0x",   "Ext 1",       "%2x",   &tmp_header.bCmdExt1 },
+      { "Size:0x",      "Size",        "%4x",   NULL },
+      { "SrcId:0x",     "Source ID",   "%2x",   NULL },
+      { "DestObj:0x",   "Object",      "%2x",   NULL },
+      { "Inst:0x",      "Instance",    "%4x",   NULL },
+      { "Cmd:0x",       "Command",     "%2x",   NULL },
+      { "CmdExt0:0x",   "Ext 0",       "%2x",   NULL },
+      { "CmdExt1:0x",   "Ext 1",       "%2x",   NULL },
       { NULL,           NULL,          NULL,    NULL }
    };
 
@@ -271,6 +274,14 @@ static bool parse_abcc_msg_header( char* string, ABP_MsgType8* ptr )
       return( false );
    }
 
+   parse_list[ 0 ].dst = &tmp_header.iDataSize;
+   parse_list[ 1 ].dst = &tmp_header.bSourceId;
+   parse_list[ 2 ].dst = &tmp_header.bDestObj;
+   parse_list[ 3 ].dst = &tmp_header.iInstance;
+   parse_list[ 4 ].dst = &tmp_header.bCmd;
+   parse_list[ 5 ].dst = &tmp_header.bCmdExt0;
+   parse_list[ 6 ].dst = &tmp_header.bCmdExt1;
+
    i = 0;
    while( parse_list[ i ].pattern != NULL ) {
 
@@ -281,7 +292,7 @@ static bool parse_abcc_msg_header( char* string, ABP_MsgType8* ptr )
          return( false );
       }
       char_ptr += strlen( parse_list[ i ].pattern );
-      
+
       /* Call scanf() to parse the hex text. */
       if( sscanf( char_ptr, parse_list[ i ].format, &value ) != 1 ) {
          fprintf( stderr, "ERROR: Could not parse '%s' value!\n", parse_list[ i ].name );
@@ -309,9 +320,9 @@ static bool parse_abcc_msg_header( char* string, ABP_MsgType8* ptr )
    ptr->sHeader.bCmd = tmp_header.bCmd;
    ptr->sHeader.bCmdExt0 = tmp_header.bCmdExt0;
    ptr->sHeader.bCmdExt1 = tmp_header.bCmdExt1;
-     
+
    return( true );
-};
+}
 
 /*############################################################################*/
 /*
@@ -326,11 +337,8 @@ int main( int argc, char* argv[] )
    int         tmp;
    int         i;
    int         value;
-   int         test_cnt = 0; //kevin
-   int         test_cnt2 = 0;
-   int         test_cnt3 = 0;
 
-   uint8_t     line_buffer[ LINE_BUFFER_SIZE ];
+   char        line_buffer[ LINE_BUFFER_SIZE ];
 
    uint8_t                 msg_direction_mask;
    ABP_MsgType8            abcc_msg_buffer;
@@ -389,7 +397,7 @@ int main( int argc, char* argv[] )
                pcap_set_present_time( &pcap_record );
                pcap_write_record( &pcap_record, output_file );
                sf_inc_seq_cnt( (struct sharkfood_record_tag*)pcap_record.data );
-               
+
                tmp = 1;
                break; /* "for( i = ... )" */
             }
@@ -402,22 +410,14 @@ int main( int argc, char* argv[] )
 
       /* ABCC message? */
       if( strstr( line_buffer, "Msg " ) != NULL ) {
-             //kevin
-             //test_cnt++;
-             //fprintf(stdout, "TEST1 : %d\n", test_cnt);
+
          /* "do/while" because we can easily break that in case of errors. */
          do {
 
             /* Which direction? */
             if( strstr( line_buffer, "Msg sent:" ) != NULL ) {
-	      //kevin
-             test_cnt2++;
-             //fprintf(stdout, "TEST2 : %d\n", test_cnt2);
                msg_direction_mask = SHARKFOOD_SRC_APPL;
             } else if( strstr( line_buffer, "Msg received:" ) != NULL ) {
-            //kevin
-             test_cnt3++;
-             //fprintf(stdout, "TEST3 : %d\n", test_cnt3);
                msg_direction_mask = SHARKFOOD_SRC_ABCC;
             } else {
                fprintf( stderr, "ERROR: Unkown msg direction!\n" );
@@ -427,13 +427,13 @@ int main( int argc, char* argv[] )
 
             /*
             ** Get the header. Usually two lines, starts with [ and ends with ].
-            ** 
+            **
             ** [ MsgBuf:0x20005c80 Size:0x0000 SrcId  :0x01 DestObj:0x03
             ** Inst  :0x0001     Cmd :0x41   CmdExt0:0x03 CmdExt1:0x00 ]
             */
 
             tmp = file_read_line( input_file, line_buffer, sizeof( line_buffer ) );
-            if( ( tmp == EOF ) || ( tmp = 0 ) ) {
+            if( ( tmp == EOF ) || ( tmp == 0 ) ) {
                fprintf( stderr, "ERROR: EOF or no data when fetching msg header string!\n" );
                fprintf( stderr, "%s\n", line_buffer );
                break;
@@ -458,155 +458,23 @@ int main( int argc, char* argv[] )
 
             delete_char_from_string( line_buffer, ' ' );
 
-            //kevin
-            //DestObj: 0x03 
-            if(test_cnt2 == 1) {
-		// Dest Obj
-		fprintf(stdout, "Txbuf[39] : %d\n", line_buffer[39]);
-              fprintf(stdout, "Txbuf[40] : %d\n", line_buffer[40]);
-	       fprintf(stdout, "Txbuf[41] : %d\n", line_buffer[41]);
-		fprintf(stdout, "Txbuf[42] : %d\n", line_buffer[42]);
-		fprintf(stdout, "Txbuf[43] : %d\n", line_buffer[43]);
-		fprintf(stdout, "Txbuf[44] : %d\n", line_buffer[44]);
-		fprintf(stdout, "Txbuf[45] : %d\n", line_buffer[45]);
-		fprintf(stdout, "Txbuf[46] : %d\n", line_buffer[46]);
-		fprintf(stdout, "Txbuf[47] : %d\n", line_buffer[47]);
-		fprintf(stdout, "Txbuf[48] : %d\n", line_buffer[48]);
-		fprintf(stdout, "Txbuf[49] : %d\n", line_buffer[49]);
-		fprintf(stdout, "Txbuf[50] : %d\n", line_buffer[50]);
-              //Instance
-		fprintf(stdout, "Txbuf[51] : %d\n", line_buffer[51]);
-		fprintf(stdout, "Txbuf[52] : %d\n", line_buffer[52]);
-		fprintf(stdout, "Txbuf[53] : %d\n", line_buffer[53]);
-		fprintf(stdout, "Txbuf[54] : %d\n", line_buffer[54]);
-		fprintf(stdout, "Txbuf[55] : %d\n", line_buffer[55]);
-		fprintf(stdout, "Txbuf[56] : %d\n", line_buffer[56]);
-		fprintf(stdout, "Txbuf[57] : %d\n", line_buffer[57]);
-		fprintf(stdout, "Txbuf[58] : %d\n", line_buffer[58]);
-		fprintf(stdout, "Txbuf[59] : %d\n", line_buffer[59]);
-		fprintf(stdout, "Txbuf[60] : %d\n", line_buffer[60]);
-		fprintf(stdout, "Txbuf[61] : %d\n", line_buffer[61]);
-		// Cmd
-		fprintf(stdout, "Txbuf[62] : %d\n", line_buffer[62]);
-		fprintf(stdout, "Txbuf[63] : %d\n", line_buffer[63]);
-		fprintf(stdout, "Txbuf[64] : %d\n", line_buffer[64]);
-		fprintf(stdout, "Txbuf[65] : %d\n", line_buffer[65]);
-		fprintf(stdout, "Txbuf[66] : %d\n", line_buffer[66]);
-		fprintf(stdout, "Txbuf[67] : %d\n", line_buffer[67]);
-	       fprintf(stdout, "Txbuf[68] : %d\n", line_buffer[68]);
-		fprintf(stdout, "Txbuf[69] : %d\n", line_buffer[69]);
-
-		// CmdExt0/CmdExt1
-		fprintf(stdout, "Txbuf[70] : %d\n", line_buffer[70]);
-		fprintf(stdout, "Txbuf[71] : %d\n", line_buffer[71]);
-		fprintf(stdout, "Txbuf[72] : %d\n", line_buffer[72]);
-		fprintf(stdout, "Txbuf[73] : %d\n", line_buffer[73]);
-		fprintf(stdout, "Txbuf[74] : %d\n", line_buffer[74]);
-		fprintf(stdout, "Txbuf[75] : %d\n", line_buffer[75]);
-	       fprintf(stdout, "Txbuf[76] : %d\n", line_buffer[76]);
-		fprintf(stdout, "Txbuf[77] : %d\n", line_buffer[77]);
-		fprintf(stdout, "Txbuf[78] : %d\n", line_buffer[78]);
-		fprintf(stdout, "Txbuf[79] : %d\n", line_buffer[79]);
-	       fprintf(stdout, "Txbuf[80] : %d\n", line_buffer[80]);
-		fprintf(stdout, "Txbuf[81] : %d\n", line_buffer[81]);
-	       fprintf(stdout, "Txbuf[82] : %d\n", line_buffer[82]);
-		fprintf(stdout, "Txbuf[83] : %d\n", line_buffer[83]);
-		fprintf(stdout, "Txbuf[84] : %d\n", line_buffer[84]);
-		fprintf(stdout, "Txbuf[85] : %d\n", line_buffer[85]);
-	       fprintf(stdout, "Txbuf[86] : %d\n", line_buffer[86]);
-		fprintf(stdout, "Txbuf[87] : %d\n", line_buffer[87]);
-		fprintf(stdout, "Txbuf[88] : %d\n", line_buffer[88]);
-		fprintf(stdout, "Txbuf[89] : %d\n", line_buffer[89]);
-		fprintf(stdout, "Txbuf[90] : %d\n", line_buffer[90]);
-		fprintf(stdout, "Txbuf[91] : %d\n", line_buffer[91]);
-	       fprintf(stdout, "Txbuf[92] : %d\n", line_buffer[92]);
-		fprintf(stdout, "Txbuf[93] : %d\n", line_buffer[93]);
-            	}
-		if(test_cnt3 == 1) {
-		// Dest Obj
-		fprintf(stdout, "Rxbuf[39] : %d\n", line_buffer[39]);
-              fprintf(stdout, "Rxbuf[40] : %d\n", line_buffer[40]);
-	       fprintf(stdout, "Rxbuf[41] : %d\n", line_buffer[41]);
-		fprintf(stdout, "Rxbuf[42] : %d\n", line_buffer[42]);
-		fprintf(stdout, "Rxbuf[43] : %d\n", line_buffer[43]);
-		fprintf(stdout, "Rxbuf[44] : %d\n", line_buffer[44]);
-		fprintf(stdout, "Rxbuf[45] : %d\n", line_buffer[45]);
-		fprintf(stdout, "Rxbuf[46] : %d\n", line_buffer[46]);
-		fprintf(stdout, "Rxbuf[47] : %d\n", line_buffer[47]);
-		fprintf(stdout, "Rxbuf[48] : %d\n", line_buffer[48]);
-		fprintf(stdout, "Rxbuf[49] : %d\n", line_buffer[49]);
-		fprintf(stdout, "Rxbuf[50] : %d\n", line_buffer[50]);
-              //Instance
-		fprintf(stdout, "Rxbuf[51] : %d\n", line_buffer[51]);
-		fprintf(stdout, "Rxbuf[52] : %d\n", line_buffer[52]);
-		fprintf(stdout, "Rxbuf[53] : %d\n", line_buffer[53]);
-		fprintf(stdout, "Rxbuf[54] : %d\n", line_buffer[54]);
-		fprintf(stdout, "Rxbuf[55] : %d\n", line_buffer[55]);
-		fprintf(stdout, "Rxbuf[56] : %d\n", line_buffer[56]);
-		fprintf(stdout, "Rxbuf[57] : %d\n", line_buffer[57]);
-		fprintf(stdout, "Rxbuf[58] : %d\n", line_buffer[58]);
-		fprintf(stdout, "Rxbuf[59] : %d\n", line_buffer[59]);
-		fprintf(stdout, "Rxbuf[60] : %d\n", line_buffer[60]);
-		fprintf(stdout, "Rxbuf[61] : %d\n", line_buffer[61]);
-		// Cmd
-		fprintf(stdout, "Rxbuf[62] : %d\n", line_buffer[62]);
-		fprintf(stdout, "Rxbuf[63] : %d\n", line_buffer[63]);
-		fprintf(stdout, "Rxbuf[64] : %d\n", line_buffer[64]);
-		fprintf(stdout, "Rxbuf[65] : %d\n", line_buffer[65]);
-		fprintf(stdout, "Rxbuf[66] : %d\n", line_buffer[66]);
-		fprintf(stdout, "Rxbuf[67] : %d\n", line_buffer[67]);
-	       fprintf(stdout, "Rxbuf[68] : %d\n", line_buffer[68]);
-		fprintf(stdout, "Rxbuf[69] : %d\n", line_buffer[69]);
-
-		// CmdExt0/CmdExt1
-		fprintf(stdout, "Rxbuf[70] : %d\n", line_buffer[70]);
-		fprintf(stdout, "Rxbuf[71] : %d\n", line_buffer[71]);
-		fprintf(stdout, "Rxbuf[72] : %d\n", line_buffer[72]);
-		fprintf(stdout, "Rxbuf[73] : %d\n", line_buffer[73]);
-		fprintf(stdout, "Rxbuf[74] : %d\n", line_buffer[74]);
-		fprintf(stdout, "Rxbuf[75] : %d\n", line_buffer[75]);
-	       fprintf(stdout, "Rxbuf[76] : %d\n", line_buffer[76]);
-		fprintf(stdout, "Rxbuf[77] : %d\n", line_buffer[77]);
-		fprintf(stdout, "Rxbuf[78] : %d\n", line_buffer[78]);
-		fprintf(stdout, "Rxbuf[79] : %d\n", line_buffer[79]);
-	       fprintf(stdout, "Rxbuf[80] : %d\n", line_buffer[80]);
-		fprintf(stdout, "Rxbuf[81] : %d\n", line_buffer[81]);
-	       fprintf(stdout, "Rxbuf[82] : %d\n", line_buffer[82]);
-		fprintf(stdout, "Rxbuf[83] : %d\n", line_buffer[83]);
-		fprintf(stdout, "Rxbuf[84] : %d\n", line_buffer[84]);
-		fprintf(stdout, "Rxbuf[85] : %d\n", line_buffer[85]);
-	       fprintf(stdout, "Rxbuf[86] : %d\n", line_buffer[86]);
-		fprintf(stdout, "Rxbuf[87] : %d\n", line_buffer[87]);
-		fprintf(stdout, "Rxbuf[88] : %d\n", line_buffer[88]);
-		fprintf(stdout, "Rxbuf[89] : %d\n", line_buffer[89]);
-		fprintf(stdout, "Rxbuf[90] : %d\n", line_buffer[90]);
-		fprintf(stdout, "Rxbuf[91] : %d\n", line_buffer[91]);
-	       fprintf(stdout, "Rxbuf[92] : %d\n", line_buffer[92]);
-		fprintf(stdout, "Rxbuf[93] : %d\n", line_buffer[93]);
-	       fprintf(stdout, "Rxbuf[94] : %d\n", line_buffer[94]);
-		fprintf(stdout, "Rxbuf[95] : %d\n", line_buffer[95]);
-	       fprintf(stdout, "Rxbuf[96] : %d\n", line_buffer[96]);
-		fprintf(stdout, "Rxbuf[97] : %d\n", line_buffer[97]);
-	       fprintf(stdout, "Rxbuf[98] : %d\n", line_buffer[98]);
-		fprintf(stdout, "Rxbuf[99] : %d\n", line_buffer[99]);
-            	}
             /* Parse the header fields. */
 
             if( !parse_abcc_msg_header( line_buffer, &abcc_msg_buffer ) )
             {
                fprintf( stderr, "ERROR: Could not parse header!\n" );
                fprintf( stderr, "%s\n", line_buffer );
-               break;  
+               break;
             };
 
             /*
             ** Get the message data. Several lines, starts with [ and ends with ].
-            ** 
+            **
             ** [ 0x11 0x22 0x33 ... 0xff ]
             */
 
             tmp = file_read_line( input_file, line_buffer, sizeof( line_buffer ) );
-            if( ( tmp == EOF ) || ( tmp = 0 ) ) {
+            if( ( tmp == EOF ) || ( tmp == 0 ) ) {
                fprintf( stderr, "ERROR: EOF or no data when fetching msg data string!\n" );
                fprintf( stderr, "%s\n", line_buffer );
                break;
@@ -630,7 +498,7 @@ int main( int argc, char* argv[] )
             }
 
             delete_char_from_string( line_buffer, ' ' );
-            
+
             /* Parse the data field. */
 
             char_ptr = line_buffer + 1; /* Skip initial [ */
@@ -664,10 +532,7 @@ int main( int argc, char* argv[] )
       } /* End of "ABCC Message?" */
 
    } /* End of "while( ... != EOF )" */
-   //kevin
-   test_cnt = 0;
-   test_cnt2 = 0;
-   test_cnt3 = 0;
+
    fclose( input_file );
    fclose( output_file );
 
